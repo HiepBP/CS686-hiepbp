@@ -1,9 +1,0 @@
-[package]
-name = "skeleton_rust"
-version = "0.1.0"
-authors = ["CharlesGe129 <char1209ge@gmail.com>"]
-edition = "2018"
-
-[dependencies]
-rust-crypto = "^0.2"
-rustc-serialize = "0.3"
