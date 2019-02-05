@@ -19,6 +19,10 @@ type Node struct {
 	flag_value   Flag_value
 }
 
+func (node Node) isEmpty() bool {
+	return reflect.DeepEqual(node, Node{})
+}
+
 type MerklePatriciaTrie struct {
 	db   map[string]Node
 	root string
@@ -37,7 +41,7 @@ func (mpt *MerklePatriciaTrie) Get(key string) (string, error) {
 func (mpt *MerklePatriciaTrie) Insert(key string, new_value string) {
 	// TODO
 	hexKey := hex.EncodeToString([]byte(key))
-	fmt.Println("Insert data with key: %s",hexKey)
+	fmt.Println("Insert data with key: %s", hexKey)
 }
 
 func (mpt *MerklePatriciaTrie) Delete(key string) error {
@@ -67,7 +71,7 @@ func insert_node(key string, new_value string, db map[string]Node, currNode Node
 	}
 }
 
-func compact_encode(hex_array []uint8) []uint8 {
+func Compact_encode(hex_array []uint8) []uint8 {
 	var term = 0
 	var result []uint8
 	if hex_array[len(hex_array)-1] == 16 {
@@ -106,20 +110,20 @@ func compact_decode(encoded_arr []uint8) []uint8 {
 		if len(result) == 2 {
 			result = result[:0]
 		} else {
-			result = result[2 : len(result)]
+			result = result[2:len(result)]
 		}
 	} else if result[0] == 3 {
-		result = result[1 : len(result)]
+		result = result[1:len(result)]
 	}
 	return result
 }
 
-func Test_compact_encode() {
-	fmt.Println(reflect.DeepEqual(compact_decode(compact_encode([]uint8{1, 2, 3, 4, 5})), []uint8{1, 2, 3, 4, 5}))
-	fmt.Println(reflect.DeepEqual(compact_decode(compact_encode([]uint8{0, 1, 2, 3, 4, 5})), []uint8{0, 1, 2, 3, 4, 5}))
-	fmt.Println(reflect.DeepEqual(compact_decode(compact_encode([]uint8{0, 15, 1, 12, 11, 8, 16})), []uint8{0, 15, 1, 12, 11, 8}))
-	fmt.Println(reflect.DeepEqual(compact_decode(compact_encode([]uint8{15, 1, 12, 11, 8, 16})), []uint8{15, 1, 12, 11, 8}))
-}
+//func Test_compact_encode() {
+//	fmt.Println(reflect.DeepEqual(compact_decode(compact_encode([]uint8{1, 2, 3, 4, 5})), []uint8{1, 2, 3, 4, 5}))
+//	fmt.Println(reflect.DeepEqual(compact_decode(compact_encode([]uint8{0, 1, 2, 3, 4, 5})), []uint8{0, 1, 2, 3, 4, 5}))
+//	fmt.Println(reflect.DeepEqual(compact_decode(compact_encode([]uint8{0, 15, 1, 12, 11, 8, 16})), []uint8{0, 15, 1, 12, 11, 8}))
+//	fmt.Println(reflect.DeepEqual(compact_decode(compact_encode([]uint8{15, 1, 12, 11, 8, 16})), []uint8{15, 1, 12, 11, 8}))
+//}
 
 func (node *Node) hash_node() string {
 	var str string
@@ -139,9 +143,11 @@ func (node *Node) hash_node() string {
 	return "HashStart_" + hex.EncodeToString(sum[:]) + "_HashEnd"
 }
 
-//func stringToHexArray(str string) []uint8{
-//
-//	for i,ch := range str {
-//
-//	}
-//}
+func StringToHexArray(str string) []uint8 {
+	var hexArrayResult []uint8
+	for i := 0; i < len(str); i++ {
+		hexArrayResult = append(hexArrayResult, str[i]/16)
+		hexArrayResult = append(hexArrayResult, str[i]%16)
+	}
+	return hexArrayResult
+}
