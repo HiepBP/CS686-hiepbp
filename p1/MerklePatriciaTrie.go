@@ -28,25 +28,68 @@ type MerklePatriciaTrie struct {
 	root string
 }
 
+func NewMPT() *MerklePatriciaTrie {
+	db := make(map[string]Node)
+	root := ""
+	return &MerklePatriciaTrie{db, root}
+}
+
 func (mpt *MerklePatriciaTrie) Get(key string) (string, error) {
 	// TODO
 	return "", errors.New("path_not_found")
 }
 
-//func (mpt *MerklePatriciaTrie) get_with_stack(key string) (string, Stack, error){
-//	hexKey := hex.EncodeToString([]byte(key))
-//	fmt.Println("Get value for: %s", hexKey)
-//}
-
 func (mpt *MerklePatriciaTrie) Insert(key string, new_value string) {
 	// TODO
 	hexKey := hex.EncodeToString([]byte(key))
-	fmt.Println("Insert data with key: %s", hexKey)
+	fmt.Println("Insert data with key: ", hexKey)
+	_, stack, _ := mpt.GetKeyPath(key)
+	length := mpt.GetPathLength(stack)
+	mpt.FollowInsertPath(length, key, new_value, stack)
+
+}
+
+//pos: number of match path
+//stack: path from root to inserted place
+func (mpt *MerklePatriciaTrie) FollowInsertPath(pos int, key string, value string, stack *Stack) {
+	//Empty tree
+	if stack.length == 0 {
+		hexArray := StringToHexArray(key)
+		hexArray = append(hexArray, 16) //append 16 to leaf
+		flagValue := Flag_value{
+			encoded_prefix: Compact_encode(hexArray),
+			value:          value,
+		}
+		newNode := Node{
+			node_type:  2,
+			flag_value: flagValue,
+		}
+		hashedNode := newNode.hash_node()
+		mpt.db[hashedNode] = newNode
+		mpt.root = hashedNode
+		return
+	} else {
+
+	}
+	return
 }
 
 func (mpt *MerklePatriciaTrie) Delete(key string) error {
 	// TODO
 	return errors.New("path_not_found")
+}
+
+func (mpt *MerklePatriciaTrie) GetPathLength(s *Stack) int {
+	length := 0
+	nodePath := s.retrieve()
+	for _, node := range nodePath {
+		if node.node_type == 1 {
+			length++
+		} else if !isLeaf(node.flag_value.encoded_prefix) { //If it is EXT, increase the length equal with the decoded_prefix
+			length += len(Compact_decode(node.flag_value.encoded_prefix))
+		}
+	}
+	return length
 }
 
 func insert_node(key string, new_value string, db map[string]Node, currNode Node) {
@@ -74,11 +117,12 @@ func insert_node(key string, new_value string, db map[string]Node, currNode Node
 func Compact_encode(hex_array []uint8) []uint8 {
 	var term = 0
 	var result []uint8
+	//Check the last value in array
 	if hex_array[len(hex_array)-1] == 16 {
 		term = 1
 	}
 	if term == 1 {
-		hex_array = hex_array[0 : len(hex_array)-1]
+		hex_array = hex_array[: len(hex_array)-1]
 	}
 	var oddlen = len(hex_array) % 2
 	var flags uint8 = uint8(2*term + oddlen)
@@ -87,7 +131,6 @@ func Compact_encode(hex_array []uint8) []uint8 {
 	} else {
 		hex_array = append([]uint8{flags, 0}, hex_array...)
 	}
-	fmt.Println("Hex Array: %v", hex_array)
 	for i := 0; i < len(hex_array); i += 2 {
 		result = append(result, 16*hex_array[i]+hex_array[i+1])
 	}
@@ -95,25 +138,18 @@ func Compact_encode(hex_array []uint8) []uint8 {
 }
 
 // If Leaf, ignore 16 at the end
-func compact_decode(encoded_arr []uint8) []uint8 {
+func Compact_decode(encoded_arr []uint8) []uint8 {
 	var result []uint8
+	//Decode back the encoded_path
 	for i := 0; i < len(encoded_arr); i++ {
 		result = append(result, encoded_arr[i]/16)
 		result = append(result, encoded_arr[i]%16)
 	}
-	fmt.Println("Decoded array: %v", result)
-	if result[0] == 0 {
+	//Check if it is even or odd len
+	if result[0] == 1 || result [0] == 3 {
+		result = result[1:len(result)]
+	} else {
 		result = result[2:len(result)]
-	} else if result[0] == 1 {
-		result = result[1:len(result)]
-	} else if result[0] == 2 {
-		if len(result) == 2 {
-			result = result[:0]
-		} else {
-			result = result[2:len(result)]
-		}
-	} else if result[0] == 3 {
-		result = result[1:len(result)]
 	}
 	return result
 }
@@ -141,13 +177,4 @@ func (node *Node) hash_node() string {
 
 	sum := sha3.Sum256([]byte(str))
 	return "HashStart_" + hex.EncodeToString(sum[:]) + "_HashEnd"
-}
-
-func StringToHexArray(str string) []uint8 {
-	var hexArrayResult []uint8
-	for i := 0; i < len(str); i++ {
-		hexArrayResult = append(hexArrayResult, str[i]/16)
-		hexArrayResult = append(hexArrayResult, str[i]%16)
-	}
-	return hexArrayResult
 }

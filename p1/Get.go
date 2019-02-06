@@ -5,15 +5,15 @@ import (
 	"fmt"
 )
 
-func (mpt *MerklePatriciaTrie) getWithNode(key string) (string, *Stack, error) {
+func (mpt *MerklePatriciaTrie) GetKeyPath(key string) (string, *Stack, error) {
 	keyHexArr := StringToHexArray(key)
 
 	fmt.Println("Merkle get %s ...", keyHexArr)
 
 	s := new(Stack)
-	
+
 	// get the tree stored user data key to the value
-	value, err := mpt.getValue(mpt.db[mpt.root], keyHexArr, 0, s)
+	value, err := mpt.getThroughPath(mpt.db[mpt.root], keyHexArr, 0, s)
 	if err != nil {
 		fmt.Println(err)
 		return "", s, err
@@ -30,8 +30,10 @@ func (mpt *MerklePatriciaTrie) getWithNode(key string) (string, *Stack, error) {
 	return value, s, err
 }
 
-func (mpt *MerklePatriciaTrie) getValue(root Node, k []uint8, pos int, s *Stack) (string, error) {
-
+func (mpt *MerklePatriciaTrie) getThroughPath(root Node, k []uint8, pos int, s *Stack) (string, error) {
+	if root.isEmpty() {
+		return "",nil
+	}
 	s.push(root)
 	switch root.node_type {
 	case 0: //NULL
@@ -47,11 +49,11 @@ func (mpt *MerklePatriciaTrie) getValue(root Node, k []uint8, pos int, s *Stack)
 			if childNode.isEmpty() {
 				return "", errors.New("problem: can not find child")
 			}
-			return mpt.getValue(childNode, k, pos+1, s)
+			return mpt.getThroughPath(childNode, k, pos+1, s)
 		}
 		return "", nil
 	case 2: //Ext or Leaf
-		path := compact_decode(root.flag_value.encoded_prefix)
+		path := Compact_decode(root.flag_value.encoded_prefix)
 		if !isLeaf(root.flag_value.encoded_prefix) { //Ext
 			if len(path) > len(k)-pos || !pathCompare(path, k[pos:pos+len(path)]) {
 				return "", nil
@@ -61,7 +63,7 @@ func (mpt *MerklePatriciaTrie) getValue(root Node, k []uint8, pos int, s *Stack)
 			if childNode.isEmpty() {
 				return "", errors.New("problem: can not find child")
 			}
-			return mpt.getValue(childNode, k, pos+len(path), s)
+			return mpt.getThroughPath(childNode, k, pos+len(path), s)
 		} else { //Leaf
 			if len(path) > len(k)-pos || !pathCompare(path, k[pos:pos+len(path)]) {
 				return "", nil
@@ -79,13 +81,6 @@ func pathCompare(arr1, arr2 []uint8) bool {
 		if arr1[i] != arr2[i] {
 			return false
 		}
-	}
-	return true
-}
-
-func isLeaf(encodedPrefix []uint8) bool {
-	if encodedPrefix[0]/16 == 0 || encodedPrefix[0]/16 == 1 {
-		return false
 	}
 	return true
 }
