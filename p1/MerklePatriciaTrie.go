@@ -4,8 +4,9 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"golang.org/x/crypto/sha3"
 	"reflect"
+
+	"golang.org/x/crypto/sha3"
 )
 
 type Flag_value struct {
@@ -68,28 +69,20 @@ func (mpt *MerklePatriciaTrie) FollowInsertPath(pos int, key string, value strin
 		mpt.db[hashedNode] = newNode
 		mpt.root = hashedNode
 		return
-	} else {
+	}
+	lastNodeInPath := stack.pop()
+	switch lastNodeInPath.node_type {
 
 	}
+	//TODO: last node is leaf
+	//TODO: last node is branch
+	//TODO: last node is extension
 	return
 }
 
 func (mpt *MerklePatriciaTrie) Delete(key string) error {
 	// TODO
 	return errors.New("path_not_found")
-}
-
-func (mpt *MerklePatriciaTrie) GetPathLength(s *Stack) int {
-	length := 0
-	nodePath := s.retrieve()
-	for _, node := range nodePath {
-		if node.node_type == 1 {
-			length++
-		} else if !isLeaf(node.flag_value.encoded_prefix) { //If it is EXT, increase the length equal with the decoded_prefix
-			length += len(Compact_decode(node.flag_value.encoded_prefix))
-		}
-	}
-	return length
 }
 
 func insert_node(key string, new_value string, db map[string]Node, currNode Node) {
@@ -122,7 +115,7 @@ func Compact_encode(hex_array []uint8) []uint8 {
 		term = 1
 	}
 	if term == 1 {
-		hex_array = hex_array[: len(hex_array)-1]
+		hex_array = hex_array[:len(hex_array)-1]
 	}
 	var oddlen = len(hex_array) % 2
 	var flags uint8 = uint8(2*term + oddlen)
@@ -146,7 +139,7 @@ func Compact_decode(encoded_arr []uint8) []uint8 {
 		result = append(result, encoded_arr[i]%16)
 	}
 	//Check if it is even or odd len
-	if result[0] == 1 || result [0] == 3 {
+	if result[0] == 1 || result[0] == 3 {
 		result = result[1:len(result)]
 	} else {
 		result = result[2:len(result)]
