@@ -37,14 +37,63 @@ func NewMPT() *MerklePatriciaTrie {
 
 func (mpt *MerklePatriciaTrie) Get(key string) (string, error) {
 	// TODO
-	return "", errors.New("path_not_found")
+	if len(mpt.root) == 0 {
+		return "", errors.New("empty trie")
+	}
+	keyHexArr := StringToHexArray(key)
+	return mpt.get(mpt.db[mpt.root], keyHexArr, 0)
+}
+
+func (mpt *MerklePatriciaTrie) get(root Node, k []uint8, pos int) (string, error) {
+	if root.isEmpty() {
+		return "", nil
+	}
+
+	switch root.node_type {
+	case 0: //NULL
+		return "", nil
+	case 1: //Branch
+		if pos == len(k) { //everything matched
+			//Get the value in branch node
+			return root.branch_value[16], nil
+		}
+		childNodePointer := root.branch_value[pos]
+		if len(childNodePointer) > 0 {
+			childNode := mpt.db[childNodePointer]
+			if childNode.isEmpty() {
+				return "", errors.New("problem: can not find child")
+			}
+			return mpt.get(childNode, k, pos+1)
+		}
+		return "", nil
+	case 2: //Ext or Leaf
+		path := Compact_decode(root.flag_value.encoded_prefix)
+		if !isLeaf(root.flag_value.encoded_prefix) { //Ext
+			if len(path) > len(k)-pos || !pathCompare(path, k[pos:pos+len(path)]) {
+				return "", nil
+			}
+			childNodePointer := root.flag_value.value
+			childNode := mpt.db[childNodePointer]
+			if childNode.isEmpty() {
+				return "", errors.New("problem: can not find child")
+			}
+			return mpt.get(childNode, k, pos+len(path))
+		} else { //Leaf
+			if len(path) > len(k)-pos || !pathCompare(path, k[pos:pos+len(path)]) {
+				return "", nil
+			}
+			//Get the value in leaf node
+			return root.flag_value.value, nil
+		}
+	}
+	return "", nil
 }
 
 func (mpt *MerklePatriciaTrie) Insert(key string, new_value string) {
 	// TODO
 	hexKey := hex.EncodeToString([]byte(key))
 	fmt.Println("Insert data with key: ", hexKey)
-	_, stack, _ := mpt.GetKeyPath(key)
+	stack, _ := mpt.GetKeyPath(key)
 	length := GetPathLength(stack)
 	mpt.InsertAtTheEndOfPath(length, key, new_value, stack)
 

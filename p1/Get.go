@@ -5,75 +5,66 @@ import (
 	"fmt"
 )
 
-func (mpt *MerklePatriciaTrie) GetKeyPath(key string) (string, *Stack, error) {
+func (mpt *MerklePatriciaTrie) GetKeyPath(key string) (*Stack, error) {
 	keyHexArr := StringToHexArray(key)
 
-	fmt.Println("Merkle get %s ...", keyHexArr)
+	fmt.Println("Merkle get ...", keyHexArr)
 
-	s := new(Stack)
+	stack := new(Stack)
 
 	// get the tree stored user data key to the value
-	value, err := mpt.getThroughPath(mpt.db[mpt.root], keyHexArr, 0, s)
+	err := mpt.getThroughPath(mpt.db[mpt.root], keyHexArr, 0, stack)
 	if err != nil {
 		fmt.Println(err)
-		return "", s, err
+		return stack, err
 	}
 
-	if value == "" {
-		fmt.Println("No data in Merkle tree for %s", keyHexArr)
-		return "", s, nil
-	}
-
-	fmt.Println("Found value %s in Merkle tree for key: %s", value, keyHexArr)
-
-	// return alue
-	return value, s, err
+	return stack, err
 }
 
-func (mpt *MerklePatriciaTrie) getThroughPath(root Node, k []uint8, pos int, s *Stack) (string, error) {
+func (mpt *MerklePatriciaTrie) getThroughPath(root Node, k []uint8, pos int, stack *Stack) error {
 	if root.isEmpty() {
-		return "",nil
+		return nil
 	}
-	s.push(root)
+	stack.push(root)
 	switch root.node_type {
 	case 0: //NULL
-		return "", nil
+		return nil
 	case 1: //Branch
 		if pos == len(k) { //everything matched
 			//Get the value in branch node
-			return root.branch_value[16], nil
+			return nil
 		}
 		childNodePointer := root.branch_value[pos]
 		if len(childNodePointer) > 0 {
 			childNode := mpt.db[childNodePointer]
 			if childNode.isEmpty() {
-				return "", errors.New("problem: can not find child")
+				return errors.New("problem: can not find child")
 			}
-			return mpt.getThroughPath(childNode, k, pos+1, s)
+			return mpt.getThroughPath(childNode, k, pos+1, stack)
 		}
-		return "", nil
+		return nil
 	case 2: //Ext or Leaf
 		path := Compact_decode(root.flag_value.encoded_prefix)
 		if !isLeaf(root.flag_value.encoded_prefix) { //Ext
 			if len(path) > len(k)-pos || !pathCompare(path, k[pos:pos+len(path)]) {
-				return "", nil
+				return nil
 			}
 			childNodePointer := root.flag_value.value
 			childNode := mpt.db[childNodePointer]
 			if childNode.isEmpty() {
-				return "", errors.New("problem: can not find child")
+				return errors.New("problem: can not find child")
 			}
-			return mpt.getThroughPath(childNode, k, pos+len(path), s)
+			return mpt.getThroughPath(childNode, k, pos+len(path), stack)
 		} else { //Leaf
 			if len(path) > len(k)-pos || !pathCompare(path, k[pos:pos+len(path)]) {
-				return "", nil
+				return nil
 			}
 			//Get the value in leaf node
-			return root.flag_value.value, nil
+			return nil
 		}
 	}
-	return "", nil
-
+	return nil
 }
 
 func pathCompare(arr1, arr2 []uint8) bool {
