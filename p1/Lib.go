@@ -1,5 +1,6 @@
 package p1
 
+//Check if the Node if Leaf/Extension base on encodedPrefix
 func isLeaf(encodedPrefix []uint8) bool {
 	if encodedPrefix[0]/16 == 0 || encodedPrefix[0]/16 == 1 {
 		return false
@@ -7,6 +8,7 @@ func isLeaf(encodedPrefix []uint8) bool {
 	return true
 }
 
+//Convert from string to hexadecimal array
 func StringToHexArray(str string) []uint8 {
 	var hexArrayResult []uint8
 	for i := 0; i < len(str); i++ {
@@ -16,7 +18,8 @@ func StringToHexArray(str string) []uint8 {
 	return hexArrayResult
 }
 
-func (mpt *MerklePatriciaTrie) GetPathLength(s *Stack) int {
+//Get the length of inserted node path on the trie
+func GetPathLength(s *Stack) int {
 	length := 0
 	nodePath := s.retrieve()
 	for _, node := range nodePath {
@@ -27,4 +30,49 @@ func (mpt *MerklePatriciaTrie) GetPathLength(s *Stack) int {
 		}
 	}
 	return length
+}
+
+func CreateNewNodeWithString(key, value string, isLeaf bool) Node {
+	hexArray := StringToHexArray(key)
+	if isLeaf {
+		hexArray = append(hexArray, 16) //append 16 to leaf
+	}
+	flagValue := Flag_value{
+		encoded_prefix: Compact_encode(hexArray),
+		value:          value,
+	}
+	return Node{
+		node_type:  2,
+		flag_value: flagValue,
+	}
+}
+
+func CreateNewNodeWithHexArray(key []uint8, value string, isLeaf bool) Node {
+	if isLeaf {
+		key = append(key, 16) //append 16 to leaf
+	}
+	flagValue := Flag_value{
+		encoded_prefix: Compact_encode(key),
+		value:          value,
+	}
+	return Node{
+		node_type:  2,
+		flag_value: flagValue,
+	}
+}
+
+func (mpt *MerklePatriciaTrie) UpdateNodeAndHashValue(key string, stack *Stack) {
+	//TODO:
+}
+
+func GetCommonPrefixPath(path1, path2 []uint8) []uint8 {
+	var result []uint8
+	for i := 0; i < len(path1) || i < len(path2); i++ {
+		if path1[i] == path2[i] {
+			result = append(result, path1[i])
+		} else {
+			break
+		}
+	}
+	return result
 }
