@@ -46,7 +46,7 @@ func (mpt *MerklePatriciaTrie) getThroughPath(root Node, k []uint8, pos int, sta
 		return nil
 	case 2: //Ext or Leaf
 		path := Compact_decode(root.flag_value.encoded_prefix)
-		if !isLeaf(root.flag_value.encoded_prefix) { //Ext
+		if !root.isLeaf() { //Ext
 			if len(path) > len(k)-pos || !pathCompare(path, k[pos:pos+len(path)]) {
 				return nil
 			}

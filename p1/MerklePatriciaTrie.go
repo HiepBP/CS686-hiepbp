@@ -68,7 +68,7 @@ func (mpt *MerklePatriciaTrie) get(root Node, k []uint8, pos int) (string, error
 		return "", nil
 	case 2: //Ext or Leaf
 		path := Compact_decode(root.flag_value.encoded_prefix)
-		if !isLeaf(root.flag_value.encoded_prefix) { //Ext
+		if !root.isLeaf() { //Ext
 			if len(path) > len(k)-pos || !pathCompare(path, k[pos:pos+len(path)]) {
 				return "", nil
 			}
@@ -90,24 +90,29 @@ func (mpt *MerklePatriciaTrie) get(root Node, k []uint8, pos int) (string, error
 }
 
 func (mpt *MerklePatriciaTrie) Insert(key string, new_value string) {
-	// TODO
 	hexKey := hex.EncodeToString([]byte(key))
 	fmt.Println("Insert data with key: ", hexKey)
 	stack, _ := mpt.GetKeyPath(key)
 	length := GetPathLength(stack)
 	mpt.InsertAtTheEndOfPath(length, key, new_value, stack)
+	stack_array := stack.retrieve()
+	rootNode := stack_array[len(stack_array)-1]
+	fmt.Println(Compact_decode(rootNode.flag_value.encoded_prefix))
 
+	fmt.Println("Insert finish")
 }
 
 //pos: number of match path
 //stack: path from root to inserted place
 func (mpt *MerklePatriciaTrie) InsertAtTheEndOfPath(pos int, key string, value string, stack *Stack) {
+	keyHexArr := StringToHexArray(key)
 	//Empty tree
 	if stack.length == 0 {
 		newNode := CreateNewNodeWithString(key, value, true)
 		hashedNode := newNode.hash_node()
+		stack.push(newNode)
 		mpt.db[hashedNode] = newNode
-		mpt.root = hashedNode
+		mpt.root = newNode.hash_node()
 		return
 	}
 	//Check the last node in the path stack to handle the insertion
@@ -131,15 +136,14 @@ func (mpt *MerklePatriciaTrie) InsertAtTheEndOfPath(pos int, key string, value s
 
 	case 2: //Last node is a leaf/extension
 		//Get the common prefix part in the path
-		keyHexArr := StringToHexArray(key)
 		lastNodePath := Compact_decode(lastNode.flag_value.encoded_prefix)
 		lastNodePathLength := GetPathLength(stack)
 		commonPrefix := GetCommonPrefixPath(lastNodePath, keyHexArr[lastNodePathLength:])
 
 		//If it is leaf and its path same with the new path
-		if isLeaf(lastNode.flag_value.encoded_prefix) &&
-			len(commonPrefix) == len(lastNodePath) &&
-			pos == len(keyHexArr) {
+		if lastNode.isLeaf() && //If it is leaf
+			len(commonPrefix) == len(lastNodePath) && //Common prefix equal with lastNodePath
+			pos+len(commonPrefix) == len(keyHexArr) { //Pos + commonPrefix == keyPath
 			delete(mpt.db, lastNodeHashed)
 			lastNode.flag_value.value = value
 			stack.push(lastNode)
@@ -155,7 +159,7 @@ func (mpt *MerklePatriciaTrie) InsertAtTheEndOfPath(pos int, key string, value s
 			extKey := lastNodePath[:len(commonPrefix)]
 			newExtNode := CreateNewNodeWithHexArray(extKey, "", false)
 			stack.push(newExtNode)
-			if len(commonPrefix) < lastNodePathLength {
+			if len(commonPrefix) < len(lastNodePath) {
 				lastNodePath = lastNodePath[len(commonPrefix):]
 			} else {
 				lastNodePath = nil
@@ -174,10 +178,14 @@ func (mpt *MerklePatriciaTrie) InsertAtTheEndOfPath(pos int, key string, value s
 			brandIndex := lastNodePath[0]
 			lastNodePath = lastNodePath[1:]
 			//Create new extension or leaf from lastNode in path
-			if len(lastNodePath) > 0 || isLeaf(lastNodePath) {
+			if len(lastNodePath) > 0 || lastNode.isLeaf() {
 				//Delete old node from db, update the encoded_prefix, add to branch, than add new one to db
 				delete(mpt.db, lastNodeHashed)
-				lastNode.flag_value.encoded_prefix = Compact_encode(lastNodePath)
+				if lastNode.isLeaf() {
+					lastNode.flag_value.encoded_prefix = Compact_encode(append(lastNodePath, 16))
+				} else {
+					lastNode.flag_value.encoded_prefix = Compact_encode(lastNodePath)
+				}
 				newBranchNode.branch_value[brandIndex] = lastNode.hash_node()
 				mpt.db[lastNode.hash_node()] = lastNode
 			} else { //Last node is ext and len = 0
@@ -186,18 +194,62 @@ func (mpt *MerklePatriciaTrie) InsertAtTheEndOfPath(pos int, key string, value s
 			}
 		} else { //If the length is 0, remove the ext/leaf and add new leaf to the branch
 			delete(mpt.db, lastNodeHashed)
-			if isLeaf(lastNode.flag_value.encoded_prefix) {
+			if lastNode.isLeaf() {
 				newBranchNode.branch_value[16] = lastNode.flag_value.value
 			}
 		}
-		if pos < len(key) {
+		if pos < len(keyHexArr) {
+			//TODO: add new leaf to branch
 			pos++
-			newLeafNode := CreateNewNodeWithString(key[pos:], value, true)
+			newLeafNode := CreateNewNodeWithHexArray(keyHexArr[pos:], value, true)
 			stack.push(newLeafNode)
+		} else {
+			//TODO: update the value in branch
 		}
 		mpt.UpdateNodeAndHashValue(key, stack)
 		return
 	}
+	return
+}
+
+func (mpt *MerklePatriciaTrie) UpdateNodeAndHashValue(key string, stack *Stack) {
+	keyHexArr := StringToHexArray(key)
+	var preNode Node
+	var currNode Node
+	var pos = len(keyHexArr) - 1
+	items := stack.retrieve()
+	// for item := stack.top; item != nil; item = item.next {
+	for i := 0; i < len(items); i++ {
+		currNode = items[i]
+		switch currNode.node_type {
+		case 1: //Branch
+			if !preNode.isEmpty() {
+				currNode.branch_value[pos] = preNode.hash_node()
+				pos--
+			}
+		case 2: //Ext/leaf
+			pos -= len(Compact_decode(currNode.flag_value.encoded_prefix))
+			if currNode.isLeaf() {
+
+			} else {
+				if !preNode.isEmpty() {
+					currNode.flag_value.value = preNode.hash_node()
+				}
+			}
+		}
+		if currNode.node_type == 1 {
+			fmt.Println("Current is Branch")
+		} else {
+			if currNode.isLeaf() {
+				fmt.Println("Current is Leaf: ", Compact_decode(currNode.flag_value.encoded_prefix))
+			} else {
+				fmt.Println("Current is Ext: ", Compact_decode(currNode.flag_value.encoded_prefix))
+			}
+		}
+		mpt.db[currNode.hash_node()] = currNode
+		preNode = currNode
+	}
+	mpt.root = currNode.hash_node()
 	return
 }
 

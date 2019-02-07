@@ -16,6 +16,8 @@ func main() {
 	//fmt.Println("Decoded Result: %v",p1.Compact_decode([]uint8{32}))
 	//p1.Test_compact_encode();
 	mpt := p1.NewMPT()
+
 	mpt.Insert("a", "apple")
+	mpt.Insert("b", "banana")
 	fmt.Println(mpt.Get("a"))
 }

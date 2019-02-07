@@ -1,8 +1,9 @@
 package p1
 
 //Check if the Node if Leaf/Extension base on encodedPrefix
-func isLeaf(encodedPrefix []uint8) bool {
-	if encodedPrefix[0]/16 == 0 || encodedPrefix[0]/16 == 1 {
+func (node *Node) isLeaf() bool {
+	if node.flag_value.encoded_prefix[0]/16 == 0 ||
+		node.flag_value.encoded_prefix[0]/16 == 1 {
 		return false
 	}
 	return true
@@ -25,7 +26,7 @@ func GetPathLength(s *Stack) int {
 	for _, node := range nodePath {
 		if node.node_type == 1 {
 			length++
-		} else if !isLeaf(node.flag_value.encoded_prefix) { //If it is EXT, increase the length equal with the decoded_prefix
+		} else if !node.isLeaf() { //If it is EXT, increase the length equal with the decoded_prefix
 			length += len(Compact_decode(node.flag_value.encoded_prefix))
 		}
 	}
@@ -59,10 +60,6 @@ func CreateNewNodeWithHexArray(key []uint8, value string, isLeaf bool) Node {
 		node_type:  2,
 		flag_value: flagValue,
 	}
-}
-
-func (mpt *MerklePatriciaTrie) UpdateNodeAndHashValue(key string, stack *Stack) {
-	//TODO:
 }
 
 func GetCommonPrefixPath(path1, path2 []uint8) []uint8 {
