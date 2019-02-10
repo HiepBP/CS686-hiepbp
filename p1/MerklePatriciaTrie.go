@@ -20,7 +20,7 @@ type Node struct {
 	flag_value   Flag_value
 }
 
-func (node Node) isEmpty() bool {
+func (node Node) is_empty() bool {
 	return reflect.DeepEqual(node, Node{})
 }
 
@@ -40,225 +40,90 @@ func (mpt *MerklePatriciaTrie) Get(key string) (string, error) {
 	if len(mpt.root) == 0 {
 		return "", errors.New("empty trie")
 	}
-	keyHexArr := StringToHexArray(key)
-	return mpt.get(mpt.db[mpt.root], keyHexArr, 0)
+	key_hex_array := string_to_hex_array(key)
+	return mpt.get(mpt.db[mpt.root], key_hex_array, 0)
 }
 
-func (mpt *MerklePatriciaTrie) get(root Node, k []uint8, pos int) (string, error) {
-	if root.isEmpty() {
-		return "", nil
+func (mpt *MerklePatriciaTrie) get(root Node, key []uint8, pos int) (string, error) {
+	if root.is_empty() {
+		return "", errors.New("problem: empty node")
 	}
 
 	switch root.node_type {
 	case 0: //NULL
-		return "", nil
+		return "", errors.New("problem: NULL node")
 	case 1: //Branch
-		if pos == len(k) { //everything matched
+		if pos == len(key) { //everything matched
 			//Get the value in branch node
 			return root.branch_value[16], nil
 		}
-		childNodePointer := root.branch_value[pos]
-		if len(childNodePointer) > 0 {
-			childNode := mpt.db[childNodePointer]
-			if childNode.isEmpty() {
+		child_node_pointer := root.branch_value[key[pos]]
+		if len(child_node_pointer) > 0 {
+			child_node := mpt.db[child_node_pointer]
+			if child_node.is_empty() {
 				return "", errors.New("problem: can not find child")
 			}
-			return mpt.get(childNode, k, pos+1)
+			return mpt.get(child_node, key, pos+1)
 		}
-		return "", nil
+		return "", errors.New("problem: branch problem")
 	case 2: //Ext or Leaf
-		path := Compact_decode(root.flag_value.encoded_prefix)
-		if !root.isLeaf() { //Ext
-			if len(path) > len(k)-pos || !pathCompare(path, k[pos:pos+len(path)]) {
-				return "", nil
+		path := compact_decode(root.flag_value.encoded_prefix)
+		if !root.is_leaf() { //Ext
+			if len(path) > len(key)-pos || !path_compare(path, key[pos:pos+len(path)]) {
+				return "", errors.New("problem: ext path not match")
 			}
-			childNodePointer := root.flag_value.value
-			childNode := mpt.db[childNodePointer]
-			if childNode.isEmpty() {
+			child_node_pointer := root.flag_value.value
+			child_node := mpt.db[child_node_pointer]
+			if child_node.is_empty() {
 				return "", errors.New("problem: can not find child")
 			}
-			return mpt.get(childNode, k, pos+len(path))
+			return mpt.get(child_node, key, pos+len(path))
 		} else { //Leaf
-			if len(path) > len(k)-pos || !pathCompare(path, k[pos:pos+len(path)]) {
-				return "", nil
+			if len(path) != len(key)-pos || !path_compare(path, key[pos:pos+len(path)]) {
+				return "", errors.New("problem: leaf path not match")
 			}
 			//Get the value in leaf node
 			return root.flag_value.value, nil
 		}
 	}
-	return "", nil
+	return "", errors.New("problem: others")
 }
 
-func (mpt *MerklePatriciaTrie) Insert(key string, new_value string) {
-	hexKey := hex.EncodeToString([]byte(key))
-	fmt.Println("Insert data with key: ", hexKey)
-	stack, _ := mpt.GetKeyPath(key)
-	length := GetPathLength(stack)
-	mpt.InsertAtTheEndOfPath(length, key, new_value, stack)
-	stack_array := stack.retrieve()
-	rootNode := stack_array[len(stack_array)-1]
-	fmt.Println(Compact_decode(rootNode.flag_value.encoded_prefix))
-
-	fmt.Println("Insert finish")
-}
-
-//pos: number of match path
-//stack: path from root to inserted place
-func (mpt *MerklePatriciaTrie) InsertAtTheEndOfPath(pos int, key string, value string, stack *Stack) {
-	keyHexArr := StringToHexArray(key)
-	//Empty tree
-	if stack.length == 0 {
-		newNode := CreateNewNodeWithString(key, value, true)
-		hashedNode := newNode.hash_node()
-		stack.push(newNode)
-		mpt.db[hashedNode] = newNode
-		mpt.root = newNode.hash_node()
-		return
-	}
-	//Check the last node in the path stack to handle the insertion
-	lastNode := stack.pop()
-	lastNodeHashed := lastNode.hash_node()
-	switch lastNode.node_type {
-
-	case 1: //LastNode is a branch
-		stack.push(lastNode)
-		if pos == len(key) { //key match the whole path to branch, update the value of branch
-			lastNode.branch_value[16] = value
-			//remove it from db
-			delete(mpt.db, lastNodeHashed)
-		} else { //add new leaf(key[pos:], value) to trie and db
-			pos++
-			newNode := CreateNewNodeWithString(key[pos:], value, true)
-			stack.push(newNode)
-		}
-		mpt.UpdateNodeAndHashValue(key, stack)
-		return
-
-	case 2: //Last node is a leaf/extension
-		//Get the common prefix part in the path
-		lastNodePath := Compact_decode(lastNode.flag_value.encoded_prefix)
-		lastNodePathLength := GetPathLength(stack)
-		commonPrefix := GetCommonPrefixPath(lastNodePath, keyHexArr[lastNodePathLength:])
-
-		//If it is leaf and its path same with the new path
-		if lastNode.isLeaf() && //If it is leaf
-			len(commonPrefix) == len(lastNodePath) && //Common prefix equal with lastNodePath
-			pos+len(commonPrefix) == len(keyHexArr) { //Pos + commonPrefix == keyPath
-			delete(mpt.db, lastNodeHashed)
-			lastNode.flag_value.value = value
-			stack.push(lastNode)
-			mpt.UpdateNodeAndHashValue(key, stack)
-			return
-		}
-
-		// Leaf/Extension with different in path
-		// If have common, create ext -> branch
-		// If no common, create branch
-		// Check if it has common, create ext or not
-		if len(commonPrefix) > 0 {
-			extKey := lastNodePath[:len(commonPrefix)]
-			newExtNode := CreateNewNodeWithHexArray(extKey, "", false)
-			stack.push(newExtNode)
-			if len(commonPrefix) < len(lastNodePath) {
-				lastNodePath = lastNodePath[len(commonPrefix):]
-			} else {
-				lastNodePath = nil
-			}
-			//Increase the pos (number of match path) base on common prefix
-			pos += len(commonPrefix)
-		}
-
-		//Then add a new branch
-		newBranchNode := Node{node_type: 1}
-		stack.push(newBranchNode)
-
-		//Check if last node in the stack is already covered in the ext or not
-		if len(lastNodePath) > 0 {
-			//Get the index in branch
-			brandIndex := lastNodePath[0]
-			lastNodePath = lastNodePath[1:]
-			//Create new extension or leaf from lastNode in path
-			if len(lastNodePath) > 0 || lastNode.isLeaf() {
-				//Delete old node from db, update the encoded_prefix, add to branch, than add new one to db
-				delete(mpt.db, lastNodeHashed)
-				if lastNode.isLeaf() {
-					lastNode.flag_value.encoded_prefix = Compact_encode(append(lastNodePath, 16))
-				} else {
-					lastNode.flag_value.encoded_prefix = Compact_encode(lastNodePath)
-				}
-				newBranchNode.branch_value[brandIndex] = lastNode.hash_node()
-				mpt.db[lastNode.hash_node()] = lastNode
-			} else { //Last node is ext and len = 0
-				delete(mpt.db, lastNodeHashed)
-				newBranchNode.branch_value[brandIndex] = lastNode.flag_value.value
-			}
-		} else { //If the length is 0, remove the ext/leaf and add new leaf to the branch
-			delete(mpt.db, lastNodeHashed)
-			if lastNode.isLeaf() {
-				newBranchNode.branch_value[16] = lastNode.flag_value.value
-			}
-		}
-		if pos < len(keyHexArr) {
-			//TODO: add new leaf to branch
-			pos++
-			newLeafNode := CreateNewNodeWithHexArray(keyHexArr[pos:], value, true)
-			stack.push(newLeafNode)
-		} else {
-			//TODO: update the value in branch
-		}
-		mpt.UpdateNodeAndHashValue(key, stack)
-		return
-	}
-	return
-}
-
-func (mpt *MerklePatriciaTrie) UpdateNodeAndHashValue(key string, stack *Stack) {
-	keyHexArr := StringToHexArray(key)
-	var preNode Node
-	var currNode Node
-	var pos = len(keyHexArr) - 1
+func (mpt *MerklePatriciaTrie) update_node_hash_value(key []uint8, stack *Stack) {
+	var pre_node Node
+	var cur_node Node
+	var pos = len(key) - 1
 	items := stack.retrieve()
 	// for item := stack.top; item != nil; item = item.next {
 	for i := 0; i < len(items); i++ {
-		currNode = items[i]
-		switch currNode.node_type {
+		cur_node = items[i]
+		if !mpt.db[cur_node.hash_node()].is_empty() {
+			delete(mpt.db, cur_node.hash_node())
+		}
+		switch cur_node.node_type {
 		case 1: //Branch
-			if !preNode.isEmpty() {
-				currNode.branch_value[pos] = preNode.hash_node()
+			if !pre_node.is_empty() {
+				cur_node.branch_value[key[pos]] = pre_node.hash_node()
 				pos--
 			}
 		case 2: //Ext/leaf
-			pos -= len(Compact_decode(currNode.flag_value.encoded_prefix))
-			if currNode.isLeaf() {
+			pos -= len(compact_decode(cur_node.flag_value.encoded_prefix))
+			if cur_node.is_leaf() {
 
 			} else {
-				if !preNode.isEmpty() {
-					currNode.flag_value.value = preNode.hash_node()
+				if !pre_node.is_empty() {
+					cur_node.flag_value.value = pre_node.hash_node()
 				}
 			}
 		}
-		if currNode.node_type == 1 {
-			fmt.Println("Current is Branch")
-		} else {
-			if currNode.isLeaf() {
-				fmt.Println("Current is Leaf: ", Compact_decode(currNode.flag_value.encoded_prefix))
-			} else {
-				fmt.Println("Current is Ext: ", Compact_decode(currNode.flag_value.encoded_prefix))
-			}
-		}
-		mpt.db[currNode.hash_node()] = currNode
-		preNode = currNode
+		mpt.db[cur_node.hash_node()] = cur_node
+		pre_node = cur_node
 	}
-	mpt.root = currNode.hash_node()
+	mpt.root = cur_node.hash_node()
 	return
 }
 
-func (mpt *MerklePatriciaTrie) Delete(key string) error {
-	// TODO
-	return errors.New("path_not_found")
-}
-
-func Compact_encode(hex_array []uint8) []uint8 {
+func compact_encode(hex_array []uint8) []uint8 {
 	var term = 0
 	var result []uint8
 	//Check the last value in array
@@ -282,7 +147,7 @@ func Compact_encode(hex_array []uint8) []uint8 {
 }
 
 // If Leaf, ignore 16 at the end
-func Compact_decode(encoded_arr []uint8) []uint8 {
+func compact_decode(encoded_arr []uint8) []uint8 {
 	var result []uint8
 	//Decode back the encoded_path
 	for i := 0; i < len(encoded_arr); i++ {
@@ -298,12 +163,12 @@ func Compact_decode(encoded_arr []uint8) []uint8 {
 	return result
 }
 
-//func Test_compact_encode() {
-//	fmt.Println(reflect.DeepEqual(compact_decode(compact_encode([]uint8{1, 2, 3, 4, 5})), []uint8{1, 2, 3, 4, 5}))
-//	fmt.Println(reflect.DeepEqual(compact_decode(compact_encode([]uint8{0, 1, 2, 3, 4, 5})), []uint8{0, 1, 2, 3, 4, 5}))
-//	fmt.Println(reflect.DeepEqual(compact_decode(compact_encode([]uint8{0, 15, 1, 12, 11, 8, 16})), []uint8{0, 15, 1, 12, 11, 8}))
-//	fmt.Println(reflect.DeepEqual(compact_decode(compact_encode([]uint8{15, 1, 12, 11, 8, 16})), []uint8{15, 1, 12, 11, 8}))
-//}
+func Test_compact_encode() {
+	fmt.Println(reflect.DeepEqual(compact_decode(compact_encode([]uint8{1, 2, 3, 4, 5})), []uint8{1, 2, 3, 4, 5}))
+	fmt.Println(reflect.DeepEqual(compact_decode(compact_encode([]uint8{0, 1, 2, 3, 4, 5})), []uint8{0, 1, 2, 3, 4, 5}))
+	fmt.Println(reflect.DeepEqual(compact_decode(compact_encode([]uint8{0, 15, 1, 12, 11, 8, 16})), []uint8{0, 15, 1, 12, 11, 8}))
+	fmt.Println(reflect.DeepEqual(compact_decode(compact_encode([]uint8{15, 1, 12, 11, 8, 16})), []uint8{15, 1, 12, 11, 8}))
+}
 
 func (node *Node) hash_node() string {
 	var str string
@@ -321,4 +186,8 @@ func (node *Node) hash_node() string {
 
 	sum := sha3.Sum256([]byte(str))
 	return "HashStart_" + hex.EncodeToString(sum[:]) + "_HashEnd"
+}
+
+func (mpt *MerklePatriciaTrie) Get_db_length() int {
+	return len(mpt.db)
 }
