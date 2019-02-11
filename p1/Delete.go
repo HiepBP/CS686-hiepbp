@@ -4,13 +4,16 @@ import (
 	"errors"
 )
 
-func (mpt *MerklePatriciaTrie) Delete(key string) error {
+func (mpt *MerklePatriciaTrie) Delete(key string) string {
 	// TODO
 	stack, err := mpt.get_path(key)
 	if err == nil {
-		return mpt.delete(key, stack)
+		err = mpt.delete(key, stack)
+		if err == nil {
+			return ""
+		}
 	}
-	return err
+	return "path_not_found"
 }
 
 func (mpt *MerklePatriciaTrie) delete(key string, stack *Stack) error {
@@ -141,6 +144,6 @@ func (mpt *MerklePatriciaTrie) delete(key string, stack *Stack) error {
 		}
 	}
 	stack.push(last_node)
-	mpt.update_hash_for_delete(key_hex_arr, stack)
+	mpt.update_node_hash_value(key_hex_arr, stack)
 	return nil
 }

@@ -2,7 +2,6 @@ package p1
 
 import (
 	"encoding/hex"
-	"errors"
 	"fmt"
 	"reflect"
 	"strings"
@@ -39,124 +38,6 @@ func NewMPT() *MerklePatriciaTrie {
 func (mpt *MerklePatriciaTrie) Initial() {
 	mpt.db = make(map[string]Node)
 	mpt.root = ""
-}
-
-func (mpt *MerklePatriciaTrie) Get(key string) (string, error) {
-	// TODO
-	if len(mpt.root) == 0 {
-		return "", errors.New("empty trie")
-	}
-	key_hex_array := string_to_hex_array(key)
-	return mpt.get(mpt.db[mpt.root], key_hex_array, 0)
-}
-
-func (mpt *MerklePatriciaTrie) get(root Node, key []uint8, pos int) (string, error) {
-	if root.is_empty() {
-		return "", errors.New("problem: empty node")
-	}
-
-	switch root.node_type {
-	case 0: //NULL
-		return "", errors.New("problem: NULL node")
-	case 1: //Branch
-		if pos == len(key) { //everything matched
-			//Get the value in branch node
-			return root.branch_value[16], nil
-		}
-		child_node_pointer := root.branch_value[key[pos]]
-		if len(child_node_pointer) > 0 {
-			child_node := mpt.db[child_node_pointer]
-			if child_node.is_empty() {
-				return "", errors.New("problem: can not find child")
-			}
-			return mpt.get(child_node, key, pos+1)
-		}
-		return "", errors.New("problem: branch problem")
-	case 2: //Ext or Leaf
-		path := compact_decode(root.flag_value.encoded_prefix)
-		if !root.is_leaf() { //Ext
-			if len(path) > len(key)-pos || !path_compare(path, key[pos:pos+len(path)]) {
-				return "", errors.New("problem: ext path not match")
-			}
-			child_node_pointer := root.flag_value.value
-			child_node := mpt.db[child_node_pointer]
-			if child_node.is_empty() {
-				return "", errors.New("problem: can not find child")
-			}
-			return mpt.get(child_node, key, pos+len(path))
-		} else { //Leaf
-			if len(path) != len(key)-pos || !path_compare(path, key[pos:pos+len(path)]) {
-				return "", errors.New("problem: leaf path not match")
-			}
-			//Get the value in leaf node
-			return root.flag_value.value, nil
-		}
-	}
-	return "", errors.New("problem: others")
-}
-
-func (mpt *MerklePatriciaTrie) update_node_hash_value(key []uint8, stack *Stack) {
-	var pre_node Node
-	var cur_node Node
-	var pos = len(key) - 1
-	items := stack.retrieve()
-	// for item := stack.top; item != nil; item = item.next {
-	for i := 0; i < len(items); i++ {
-		cur_node = items[i]
-		delete(mpt.db, cur_node.hash_node())
-		switch cur_node.node_type {
-		case 1: //Branch
-			if !pre_node.is_empty() {
-				cur_node.branch_value[key[pos]] = pre_node.hash_node()
-				pos--
-			}
-		case 2: //Ext/leaf
-			pos -= len(compact_decode(cur_node.flag_value.encoded_prefix))
-			if cur_node.is_leaf() {
-
-			} else {
-				if !pre_node.is_empty() {
-					cur_node.flag_value.value = pre_node.hash_node()
-				}
-			}
-		}
-		mpt.db[cur_node.hash_node()] = cur_node
-		pre_node = cur_node
-	}
-	mpt.root = cur_node.hash_node()
-	return
-}
-
-func (mpt *MerklePatriciaTrie) update_hash_for_delete(key []uint8, stack *Stack) {
-	var pre_node Node
-	var cur_node Node
-	var pos = len(key) - 1
-	items := stack.retrieve()
-	// for item := stack.top; item != nil; item = item.next {
-	for i := 0; i < len(items); i++ {
-		cur_node = items[i]
-		delete(mpt.db, cur_node.hash_node())
-		switch cur_node.node_type {
-		case 1: //Branch
-			if !pre_node.is_empty() {
-				cur_node.branch_value[key[pos]] = pre_node.hash_node()
-				pos--
-			}
-		case 2: //Ext/leaf
-			pos -= len(compact_decode(cur_node.flag_value.encoded_prefix))
-			if cur_node.is_leaf() {
-
-			} else {
-				if !pre_node.is_empty() {
-					cur_node.flag_value.value = pre_node.hash_node()
-				}
-			}
-		}
-		mpt.db[cur_node.hash_node()] = cur_node
-		pre_node = cur_node
-	}
-	mpt.root = cur_node.hash_node()
-	return
 }
 
 func compact_encode(hex_array []uint8) []uint8 {
@@ -304,4 +185,36 @@ func (mpt *MerklePatriciaTrie) Order_nodes() string {
 
 func TestCompact() {
 	test_compact_encode()
+}
+
+func (mpt *MerklePatriciaTrie) update_node_hash_value(key []uint8, stack *Stack) {
+	var pre_node Node
+	var cur_node Node
+	var pos = len(key) - 1
+	items := stack.retrieve()
+	// for item := stack.top; item != nil; item = item.next {
+	for i := 0; i < len(items); i++ {
+		cur_node = items[i]
+		delete(mpt.db, cur_node.hash_node())
+		switch cur_node.node_type {
+		case 1: //Branch
+			if !pre_node.is_empty() {
+				cur_node.branch_value[key[pos]] = pre_node.hash_node()
+				pos--
+			}
+		case 2: //Ext/leaf
+			pos -= len(compact_decode(cur_node.flag_value.encoded_prefix))
+			if cur_node.is_leaf() {
+
+			} else {
+				if !pre_node.is_empty() {
+					cur_node.flag_value.value = pre_node.hash_node()
+				}
+			}
+		}
+		mpt.db[cur_node.hash_node()] = cur_node
+		pre_node = cur_node
+	}
+	mpt.root = cur_node.hash_node()
+	return
 }
