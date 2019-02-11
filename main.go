@@ -96,4 +96,6 @@ func main() {
 	fmt.Println(mpt.Get_db_length())
 	mpt.Insert("a", "new")
 	fmt.Println(mpt.Get_db_length())
+	mpt.Delete("a")
+	fmt.Println(mpt.Get_db_length())
 }
