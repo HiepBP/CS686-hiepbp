@@ -20,14 +20,16 @@ func string_to_hex_array(str string) []uint8 {
 }
 
 //Get the length of inserted node path on the trie
-func get_path_length(s *Stack) int {
+func get_path_length(key []uint8, s *Stack) int {
 	length := 0
 	nodePath := s.retrieve()
-	for _, node := range nodePath {
+	for i := len(nodePath) - 1; i >= 0; i-- {
+		node := nodePath[i]
 		if node.node_type == 1 {
 			length++
 		} else if !node.is_leaf() { //If it is EXT, increase the length equal with the decoded_prefix
 			length += len(compact_decode(node.flag_value.encoded_prefix))
+			// length += len(get_common_prefix(key[length:], compact_decode(node.flag_value.encoded_prefix)))
 		}
 	}
 	return length
