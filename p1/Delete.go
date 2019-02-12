@@ -5,7 +5,7 @@ import (
 )
 
 func (mpt *MerklePatriciaTrie) Delete(key string) string {
-	// TODO
+	log.Debug("Delete: ", key)
 	stack, err := mpt.get_path(key)
 	if err == nil {
 		err = mpt.delete(key, stack)

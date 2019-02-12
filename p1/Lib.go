@@ -1,6 +1,11 @@
 package p1
 
-import "errors"
+import (
+	"errors"
+	"os"
+
+	logging "github.com/op/go-logging"
+)
 
 //Check if the Node if Leaf/Extension base on encodedPrefix
 func (node *Node) is_leaf() bool {
@@ -126,4 +131,15 @@ func path_compare(arr1, arr2 []uint8) bool {
 		}
 	}
 	return true
+}
+
+func Config_log() {
+	backend1 := logging.NewLogBackend(os.Stderr, "", 0)
+	backend2 := logging.NewLogBackend(os.Stderr, "", 0)
+	backend2Formatter := logging.NewBackendFormatter(backend2, format)
+	backend1Leveled := logging.AddModuleLevel(backend1)
+	backend1Leveled.SetLevel(logging.ERROR, "")
+
+	// Set the backends to be used.
+	logging.SetBackend(backend1Leveled, backend2Formatter)
 }

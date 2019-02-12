@@ -1,12 +1,11 @@
 package main
 
 import (
-	"fmt"
-
 	"./p1"
 )
 
 func main() {
+	p1.Config_log()
 	mpt := p1.NewMPT()
 
 	//1
@@ -89,13 +88,8 @@ func main() {
 	//v_np
 
 	mpt.Insert("a", "old")
-	fmt.Println(mpt.Get_db_length())
 	mpt.Insert("aa", "apple")
-	fmt.Println(mpt.Get_db_length())
 	mpt.Insert("ap", "banana")
-	fmt.Println(mpt.Get_db_length())
 	mpt.Insert("a", "new")
-	fmt.Println(mpt.Get_db_length())
 	mpt.Delete("a")
-	fmt.Println(mpt.Get_db_length())
 }

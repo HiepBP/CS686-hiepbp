@@ -5,7 +5,7 @@ import (
 )
 
 func (mpt *MerklePatriciaTrie) Get(key string) (string, error) {
-	// TODO
+	log.Debug("Get: ", key)
 	if len(mpt.root) == 0 {
 		return "", errors.New("empty trie")
 	}

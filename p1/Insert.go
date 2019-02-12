@@ -1,6 +1,7 @@
 package p1
 
 func (mpt *MerklePatriciaTrie) Insert(key string, new_value string) {
+	log.Debug("Insert ", key, " : ", new_value)
 	// hexKey := hex.EncodeToString([]byte(key))
 	// fmt.Println("Insert data with key: ", hexKey)
 	stack, _ := mpt.get_path(key)
