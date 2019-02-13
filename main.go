@@ -1,6 +1,8 @@
 package main
 
 import (
+	"fmt"
+
 	"./p1"
 )
 
@@ -86,10 +88,18 @@ func main() {
 	// fmt.Println(mpt.Get_db_length())
 
 	//v_np
+	// mpt.Insert("a", "old")
+	// mpt.Insert("aa", "apple")
+	// mpt.Insert("ap", "banana")
+	// mpt.Insert("a", "new")
+	// mpt.Delete("a")
+	// fmt.Println(mpt.Get_db_length())
 
-	mpt.Insert("a", "old")
-	mpt.Insert("aa", "apple")
-	mpt.Insert("ap", "banana")
-	mpt.Insert("a", "new")
-	mpt.Delete("a")
+	mpt.Insert("a", "10")
+	mpt.Insert("b", "20")
+	mpt.Insert("p", "30")
+	mpt.Insert("c", "50")
+	mpt.Insert("aa", "40")
+	fmt.Println(mpt.Get_db_length())
+	fmt.Println(mpt.Order_nodes())
 }

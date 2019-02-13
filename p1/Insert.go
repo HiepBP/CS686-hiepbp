@@ -60,11 +60,8 @@ func (mpt *MerklePatriciaTrie) insert(pos int, key string, value string, stack *
 			pos -= len(compact_decode(last_node.flag_value.encoded_prefix))
 		}
 
-		// Leaf/Extension with different in path
 		// If have common, create ext -> branch
 		// If no common, create branch
-		// Check if it has common, create ext or not
-
 		last_node_path := compact_decode(last_node.flag_value.encoded_prefix)
 		common_prefix := get_common_prefix(last_node_path, key_hex_arr[pos:])
 		if len(common_prefix) > 0 {
@@ -118,7 +115,6 @@ func (mpt *MerklePatriciaTrie) insert(pos int, key string, value string, stack *
 			new_leaf_node := create_new_node(key_hex_arr[pos:], value, true)
 			stack.push(&new_leaf_node)
 		} else {
-			//TODO: update the value in branch
 			new_branch_node.branch_value[16] = value
 		}
 		mpt.update_node_hash_value(key_hex_arr, stack)
