@@ -1,15 +1,14 @@
 package p1
 
 func (mpt *MerklePatriciaTrie) Insert(key string, new_value string) {
-	log.Debug("Insert ", key, " : ", new_value)
-	// hexKey := hex.EncodeToString([]byte(key))
-	// fmt.Println("Insert data with key: ", hexKey)
 	stack, _ := mpt.get_path(key)
 	length := get_path_length(string_to_hex_array(key), stack)
 	mpt.insert(length, key, new_value, stack)
 }
 
 //pos: number of match path
+//key: inoput key
+//value: input value
 //stack: path from root to inserted place
 func (mpt *MerklePatriciaTrie) insert(pos int, key string, value string, stack *Stack) {
 	key_hex_arr := string_to_hex_array(key)

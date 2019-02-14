@@ -5,7 +5,6 @@ import (
 )
 
 func (mpt *MerklePatriciaTrie) Delete(key string) string {
-	log.Debug("Delete: ", key)
 	stack, err := mpt.get_path(key)
 	if err == nil {
 		err = mpt.delete(key, stack)
@@ -16,6 +15,8 @@ func (mpt *MerklePatriciaTrie) Delete(key string) string {
 	return "path_not_found"
 }
 
+//key: input key
+//stack: path from root to inserted place
 func (mpt *MerklePatriciaTrie) delete(key string, stack *Stack) error {
 	key_hex_arr := string_to_hex_array(key)
 	last_node := stack.pop()

@@ -2,9 +2,6 @@ package p1
 
 import (
 	"errors"
-	"os"
-
-	logging "github.com/op/go-logging"
 )
 
 //Check if the Node if Leaf/Extension base on encodedPrefix
@@ -42,6 +39,9 @@ func get_path_length(key []uint8, s *Stack) int {
 	return length
 }
 
+//Create new node from input value
+//key: hex array of input key
+//isLeaf: if created node is a leaf/ext
 func create_new_node(key []uint8, value string, isLeaf bool) Node {
 	if isLeaf {
 		key = append(key, 16) //append 16 to leaf
@@ -56,6 +56,7 @@ func create_new_node(key []uint8, value string, isLeaf bool) Node {
 	}
 }
 
+//Get common prefix from 2 input array
 func get_common_prefix(path1, path2 []uint8) []uint8 {
 	var result []uint8
 	for i := 0; i < len(path1) && i < len(path2); i++ {
@@ -68,6 +69,8 @@ func get_common_prefix(path1, path2 []uint8) []uint8 {
 	return result
 }
 
+//Get the path from root to node of input key
+//Return a stack contain that path
 func (mpt *MerklePatriciaTrie) get_path(key string) (*Stack, error) {
 	keyHexArr := string_to_hex_array(key)
 
@@ -79,6 +82,10 @@ func (mpt *MerklePatriciaTrie) get_path(key string) (*Stack, error) {
 	return stack, err
 }
 
+//root: current handling node
+//key: input key
+//pos: number of match path
+//stack: path from root to current node
 func (mpt *MerklePatriciaTrie) get_path_recursive(root Node, key []uint8, pos int, stack *Stack) error {
 	if root.is_empty() {
 		return errors.New("problem: empty node")
@@ -124,6 +131,7 @@ func (mpt *MerklePatriciaTrie) get_path_recursive(root Node, key []uint8, pos in
 	return errors.New("problem: others")
 }
 
+//Compare to uint8 array
 func path_compare(arr1, arr2 []uint8) bool {
 	for i := 0; i < len(arr1); i++ {
 		if arr1[i] != arr2[i] {
@@ -131,15 +139,4 @@ func path_compare(arr1, arr2 []uint8) bool {
 		}
 	}
 	return true
-}
-
-func Config_log() {
-	backend1 := logging.NewLogBackend(os.Stderr, "", 0)
-	backend2 := logging.NewLogBackend(os.Stderr, "", 0)
-	backend2Formatter := logging.NewBackendFormatter(backend2, format)
-	backend1Leveled := logging.AddModuleLevel(backend1)
-	backend1Leveled.SetLevel(logging.ERROR, "")
-
-	// Set the backends to be used.
-	logging.SetBackend(backend1Leveled, backend2Formatter)
 }

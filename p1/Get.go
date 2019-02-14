@@ -5,7 +5,6 @@ import (
 )
 
 func (mpt *MerklePatriciaTrie) Get(key string) (string, error) {
-	log.Debug("Get: ", key)
 	if len(mpt.root) == 0 {
 		return "", errors.New("empty trie")
 	}
@@ -13,6 +12,9 @@ func (mpt *MerklePatriciaTrie) Get(key string) (string, error) {
 	return mpt.get(mpt.db[mpt.root], key_hex_array, 0)
 }
 
+//root: current handling node
+//key: input key
+//pos: number of match path
 func (mpt *MerklePatriciaTrie) get(root Node, key []uint8, pos int) (string, error) {
 	if root.is_empty() {
 		return "", errors.New("problem: empty node")
