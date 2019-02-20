@@ -7,7 +7,6 @@ import (
 )
 
 func main() {
-	p1.Config_log()
 	mpt := p1.NewMPT()
 
 	//1
