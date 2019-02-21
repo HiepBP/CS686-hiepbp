@@ -23,14 +23,14 @@ func (blockChain *BlockChain) Insert(block block.Block) {
 
 }
 
-//EncodeToBase64 function encode the blockchain instance into a base64 string
-func (blockChain *BlockChain) EncodeToBase64() string {
+//EncodeToJSON function encode the blockchain instance into a json string
+func (blockChain *BlockChain) EncodeToJSON() string {
 	var result string
 	return result
 }
 
-//DecodeFromBase64 function call by blockchain instance and take base64 string
+//DecodeFromJSON function call by blockchain instance and take json string
 //decode that string back to blockchain instance and copy everthing to the current blockchain
-func (blockChain *BlockChain) DecodeFromBase64(base64String string) {
+func (blockChain *BlockChain) DecodeFromJSON(json string) {
 
 }

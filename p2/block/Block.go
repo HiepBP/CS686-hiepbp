@@ -6,8 +6,10 @@ import (
 
 //Header contains information of current block
 type Header struct {
-	height     int32
-	timestamp  int64 //UNIX timestamp 1550013938
+	height    int32
+	timestamp int64 //UNIX timestamp 1550013938
+	// hash_string = string(b.Header.Height) + string(b.Header.timestamp) + b.Header.ParentHash + b.Value.Root + string(b.Header.Size)
+	// SHA3-256 encoded value of this string (follow this specific order)
 	hash       string
 	parentHash string
 	size       int32
@@ -25,14 +27,14 @@ func Initial() {
 
 }
 
-//DecodeFromBase64 function takes a string represents the base64 hashed value of a block,
+//DecodeFromJSON function takes a string represents the json value of a block,
 //decode the string back to a block instance
-func DecodeFromBase64(base64String string) Block {
+func DecodeFromJSON(json string) Block {
 	var result Block
 	return result
 }
 
-//EncodeToBase64 function encode a block instance into base64 format
-func (block *Block) EncodeToBase64() string {
+//EncodeToJSON function encode a block instance into json string
+func (block *Block) EncodeToJSON() string {
 	return ""
 }
