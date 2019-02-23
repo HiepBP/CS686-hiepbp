@@ -4,6 +4,7 @@ func (mpt *MerklePatriciaTrie) Insert(key string, new_value string) {
 	stack, _ := mpt.get_path(key)
 	length := get_path_length(string_to_hex_array(key), stack)
 	mpt.insert(length, key, new_value, stack)
+	mpt.keyVal[key] = new_value
 }
 
 //pos: number of match path

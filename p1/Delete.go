@@ -9,6 +9,7 @@ func (mpt *MerklePatriciaTrie) Delete(key string) string {
 	if err == nil {
 		err = mpt.delete(key, stack)
 		if err == nil {
+			delete(mpt.keyVal, key)
 			return ""
 		}
 	}

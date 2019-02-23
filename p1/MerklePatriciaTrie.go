@@ -25,18 +25,25 @@ func (node Node) is_empty() bool {
 }
 
 type MerklePatriciaTrie struct {
-	db   map[string]Node
-	root string
+	db     map[string]Node
+	keyVal map[string]string
+	root   string
+}
+
+func (mpt *MerklePatriciaTrie) Root() string {
+	return mpt.root
 }
 
 func NewMPT() *MerklePatriciaTrie {
 	db := make(map[string]Node)
+	keyVal := make(map[string]string)
 	root := ""
-	return &MerklePatriciaTrie{db, root}
+	return &MerklePatriciaTrie{db, keyVal, root}
 }
 
 func (mpt *MerklePatriciaTrie) Initial() {
 	mpt.db = make(map[string]Node)
+	mpt.keyVal = make(map[string]string)
 	mpt.root = ""
 }
 
@@ -217,4 +224,16 @@ func (mpt *MerklePatriciaTrie) update_node_hash_value(key []uint8, stack *Stack)
 	}
 	mpt.root = cur_node.hash_node()
 	return
+}
+
+func InitMPT(keyValue map[string]string) *MerklePatriciaTrie {
+	mpt := NewMPT()
+	for key, value := range keyValue {
+		mpt.Insert(key, value)
+	}
+	return mpt
+}
+
+func (mpt *MerklePatriciaTrie) GetListKeyValue() map[string]string {
+	return mpt.keyVal
 }
