@@ -1,10 +1,23 @@
 package p2
 
+import (
+	"encoding/json"
+	"fmt"
+)
+
 //BlockChain contain a map(which maps to block height to a list of blocks)
 //and length equals to the highest block height
 type BlockChain struct {
 	chain  map[int32][]Block
 	length int32
+}
+
+type BlockChainJson struct {
+	chain []BlockJson
+}
+
+type BlockJson struct {
+	Elements map[string]string `json:" "`
 }
 
 func NewBlockChain() *BlockChain {
@@ -48,15 +61,46 @@ func (blockChain *BlockChain) Insert(newBlock Block) {
 }
 
 //EncodeToJSON function encode the blockchain instance into a json string
-func (blockChain *BlockChain) EncodeToJSON() string {
+func (blockChain *BlockChain) EncodeToJSON() (string, error) {
 	var result string
-	return result
+	var elements []map[string]interface{}
+	var element map[string]interface{}
+	for _, blockHeight := range blockChain.chain {
+		for _, block := range blockHeight {
+			element = make(map[string]interface{})
+			jsonBlock, err := block.EncodeToJSON()
+			if err != nil {
+				return result, err
+			}
+			//Pass jsonBlock back into map of key value in json
+			err = json.Unmarshal([]byte(jsonBlock), &element)
+			if err != nil {
+				return result, err
+			}
+			elements = append(elements, element)
+		}
+	}
+	jsonByte, _ := json.Marshal(elements)
+	result = string(jsonByte)
+	fmt.Println(string(jsonByte))
+	return result, nil
 }
 
 //DecodeFromJSON function call by blockchain instance and take json string
 //decode that string back to blockchain instance and copy everthing to the current blockchain
-func (blockChain *BlockChain) DecodeFromJSON(json string) {
-
+func DecodeJsonToBlockChain(jsonString string) (*BlockChain, error) {
+	result := NewBlockChain()
+	var elements []map[string]interface{}
+	err := json.Unmarshal([]byte(jsonString), &elements)
+	for _, element := range elements {
+		jsonElement, _ := json.Marshal(element)
+		block, _ := DecodeFromJSON(string(jsonElement))
+		result.Insert(block)
+	}
+	if err != nil {
+		return result, err
+	}
+	return result, nil
 }
 
 func containHash(listBlock []Block, block Block) bool {
