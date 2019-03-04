@@ -53,6 +53,7 @@ func (blockChain *BlockChain) Insert(newBlock Block) {
 	if listBlock, ok := blockChain.chain[newBlock.Header.Height]; ok { //Already has that height
 		if !containHash(listBlock, newBlock) {
 			listBlock = append(listBlock, newBlock)
+			blockChain.chain[newBlock.Header.Height] = listBlock
 		}
 	} else { //New height
 		blockChain.chain[newBlock.Header.Height] = []Block{newBlock}
